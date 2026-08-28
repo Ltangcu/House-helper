@@ -492,10 +492,10 @@ async function loginUser() {
 
     const auth = app.auth;
 
-    const { data, error } = await auth.signInWithPassword({
-      username: username,
-      password: password
-    });
+    const { data, error } = await auth.signIn({
+  username: username,
+  password: password
+});
 
     if (error) {
       throw error;
