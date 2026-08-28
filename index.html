@@ -486,56 +486,13 @@ async function loginUser() {
   messageEl.style.color = "#64748b";
 
   try {
-    // 每次登录时直接取得认证对象，避免变量初始化顺序问题
     const app = cloudbase.init({
       env: CLOUDBASE_ENV
     });
 
     const auth = app.auth;
 
-    const result = await auth.signInWithPassword({
-      username: username,
-      password: password
-    });
-
-    console.log("CloudBase 登录结果：", result);
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    messageEl.innerText = "登录成功，正在进入...";
-    messageEl.style.color = "#059669";
-
-    setTimeout(() => {
-      document.getElementById("loginScreen").style.display = "none";
-    }, 500);
-
-  } catch (error) {
-    console.error("登录失败：", error);
-
-    messageEl.innerText =
-      "登录失败：" + (error.message || "账号或密码错误");
-
-    messageEl.style.color = "#ef4444";
-  }
-}
-  const username = document.getElementById("loginUsername").value.trim();
-  const password = document.getElementById("loginPassword").value;
-
-  const messageEl = document.getElementById("loginMessage");
-
-  if (!username || !password) {
-    messageEl.innerText = "请输入账号和密码";
-    messageEl.style.color = "#ef4444";
-    return;
-  }
-
-  messageEl.innerText = "正在登录...";
-  messageEl.style.color = "#64748b";
-
-  try {
-    const { data, error } = await cloudAuth.signInWithPassword({
+    const { data, error } = await auth.signInWithPassword({
       username: username,
       password: password
     });
@@ -554,7 +511,6 @@ async function loginUser() {
     }, 500);
 
   } catch (error) {
-
     console.error("登录失败：", error);
 
     messageEl.innerText =
@@ -563,7 +519,6 @@ async function loginUser() {
     messageEl.style.color = "#ef4444";
   }
 }
-    
     let map, transferService, geocoder, transferPlugin;
     let markers = [];
     let selectedLngLat = null;
