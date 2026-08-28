@@ -492,10 +492,19 @@ async function loginUser() {
 
     const auth = app.auth;
 
-    const { data, error } = await auth.signInWithPassword({
-  username: username,
+  let loginParams = {
   password: password
-});
+};
+
+if (username.includes("@")) {
+  loginParams.email = username;
+} else if (/^1\d{10}$/.test(username)) {
+  loginParams.phone = username;
+} else {
+  loginParams.username = username;
+}
+
+const { data, error } = await auth.signInWithPassword(loginParams);
 
     if (error) {
       throw error;
