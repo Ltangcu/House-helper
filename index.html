@@ -13,7 +13,7 @@
   <!-- 引入高德地图 JS API v2.0 -->
   <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=28927eec25e239388ac61dd118b8034b&plugin=AMap.Transfer,AMap.Geocoder,AMap.AutoComplete,AMap.PlaceSearch"></script>
   
-<script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js"></script>
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/3.0.1/cloudbase.full.js"></script>
   
   <style>
     :root {
@@ -320,9 +320,12 @@
         autocomplete="current-password"
       >
 
-      <button class="login-btn" onclick="loginUser()">
-        登录
-      </button>
+      <button
+  class="login-btn"
+  type="button"
+  onclick="loginUser()">
+  登录
+</button>
 
       <div id="loginMessage"></div>
 
@@ -470,14 +473,14 @@
 // ===== CloudBase 配置 =====
 const CLOUDBASE_ENV = "house-helper-prod-d1df1j949f6374";
 
-// ===== 初始化 CloudBase =====
+// ===== 初始化 CloudBase v3 =====
 const cloudApp = cloudbase.init({
   env: CLOUDBASE_ENV,
   accessKey: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjA1YmVlZDg3LWI2MzgtNGE5NC1hOWNkLWVhNDk5ZTUwNWE1ZSJ9.eyJpc3MiOiJodHRwczovL2hvdXNlLWhlbHBlci1wcm9kLWQxZGYxajk0OWY2Mzc0LmFwLXNoYW5naGFpLnRjYi1hcGkudGVuY2VudGNsb3VkYXBpLmNvbSIsInN1YiI6ImFub24iLCJhdWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsImV4cCI6NDA5MTU5MTgzOSwiaWF0IjoxNzg3OTA4NjM5LCJub25jZSI6IkNzaWl0elNzUWdtam04RTZUTjhQZ2ciLCJhdF9oYXNoIjoiQ3NpaXR6U3NRZ21qbThFNlROOFBnZyIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.zrzL8s1Bt-aHZOe43ncPH7aTaY6JF0wdCJR41LUYkrROOYRMgFfKCNm58H-qHyuV2AzbTsq0_Snptm9_hKwwgJr04rQgq4HI2eGlR-WkeHLrNHCbTqGLZMVA88xZf_GQ8t16r8d0CWTtJXGuVvqUVDfVBfipsfgCMRVMHRL-F4aZJa6T7bm58mIJSbUn9oQNBM5WJb6uzIIGf-e-F3ljN49fo6nwKmhOZQyz5ShWJTBGOSIXp3fEKh0ZBkPMCvicn_dy4xfpF7lK3N2M7OQ9DitDIve7VRzulvtIfdzwEH2h5gOPJc6xgbSpwA2CQnyqs5xJ6nwA0KeTbRapiQntRg"
 });
 
-// 注意：CloudBase JS SDK 2.x 必须使用 app.auth()
-const cloudAuth = cloudApp.auth();
+// CloudBase v3：auth 是属性，不要加 ()
+const cloudAuth = cloudApp.auth;
 
 // ===== 登录 =====
 async function loginUser() {
@@ -495,15 +498,15 @@ async function loginUser() {
   messageEl.style.color = "#64748b";
 
   try {
-    const result = await cloudAuth.signInWithUsernameAndPassword(
-      username,
-      password
-    );
+    const { data, error } = await cloudAuth.signInWithPassword({
+      username: username,
+      password: password
+    });
 
-    console.log("CloudBase 登录结果：", result);
+    console.log("CloudBase 登录结果：", data);
 
-    if (result && result.error) {
-      throw result.error;
+    if (error) {
+      throw error;
     }
 
     messageEl.innerText = "登录成功，正在进入...";
@@ -517,13 +520,13 @@ async function loginUser() {
     console.error("登录失败：", error);
 
     messageEl.innerText =
-      "登录失败：" + (error.message || "登录失败");
+      "登录失败：" + (error.message || "未知错误");
 
     messageEl.style.color = "#ef4444";
   }
 }
 
-    let map, transferService, geocoder, transferPlugin;
+let map, transferService, geocoder, transferPlugin;
     let markers = [];
     let selectedLngLat = null;
     let workSelectedLngLat = null;
