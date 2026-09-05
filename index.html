@@ -480,7 +480,7 @@ const cloudApp = cloudbase.init({
 });
 
 // CloudBase v3：auth 是属性，不要加 ()
-const cloudAuth = cloudApp.auth;
+window.cloudAuth = cloudApp.auth;
 
 // ===== 登录 =====
 async function loginUser() {
@@ -498,7 +498,7 @@ async function loginUser() {
   messageEl.style.color = "#64748b";
 
   try {
-    const { data, error } = await cloudAuth.signInWithPassword({
+   const { data, error } = await window.cloudAuth.signInWithPassword({
       username: username,
       password: password
     });
