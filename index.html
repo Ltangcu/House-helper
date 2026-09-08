@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小雨租房 - 地图助手</title>
+  <!-- 高德地图安全配置 -->
+  <script type="text/javascript">
+    window._AMapSecurityConfig = {
+      securityJsCode: '27cd846f9254bc9655772a42963b5507',
+    }
+  </script>
+  <!-- 引入高德地图 JS API v2.0 -->
+  <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=28927eec25e239388ac61dd118b8034b&plugin=AMap.Transfer,AMap.Geocoder,AMap.AutoComplete,AMap.PlaceSearch"></script>
+  
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/3.0.1/cloudbase.full.js"></script>
+  
+  <style>
+    :root {
+      --primary-green: #10b981;
+      --primary-dark: #059669;
+      --mint-light: #ecfdf5;
+      --accent-yellow: #f59e0b;
+      --accent-pink: #f43f5e;
+      --accent-blue: #3b82f6;
+      --bg-glass: rgba(255, 255, 255, 0.92);
+      --text-main: #1f2937;
+      --text-sub: #4b5563;
+      --border-color: #d1fae5;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background-color: #f0fdf4; color: var(--text-main); }
+
+    .app-container { display: flex; width: 100vw; height: 100vh; position: relative; }
+    #map-container { flex: 1; height: 100%; width: 100%; z-index: 1; }
+
+    .mobile-nav {
+      display: none;
+      position: absolute; top: 0; left: 0; right: 0; z-index: 200;
+      background: var(--bg-glass); backdrop-filter: blur(10px);
+      padding: 10px; border-bottom: 2px solid var(--border-color);
+      justify-content: space-around;
+    }
+    .mobile-tab {
+      padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold;
+      background: #e2e8f0; color: #475569; border: none; cursor: pointer;
+    }
+    .mobile-tab.active { background: var(--primary-green); color: white; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4); }
+
+    .control-panel {
+      position: absolute; top: 20px; left: 20px; z-index: 100;
+      width: 740px; max-height: calc(100vh - 40px);
+      background: var(--bg-glass); backdrop-filter: blur(16px);
+      border-radius: 20px; padding: 20px;
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      display: flex; flex-direction: column; gap: 15px;
+      transition: all 0.3s ease;
+    }
+
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 2px dashed var(--border-color); padding-bottom: 10px;
+    }
+    .brand-title { font-size: 20px; font-weight: 800; color: var(--primary-dark); display: flex; align-items: center; gap: 8px; }
+
+    .columns-wrapper { display: flex; gap: 16px; overflow-y: auto; padding-right: 4px; max-height: calc(100vh - 120px); }
+    .column { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .column-left { border-right: 1px dashed #cbd5e1; padding-right: 14px; }
+
+    .card {
+      background: #ffffff; border-radius: 14px; padding: 14px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+    .card-title {
+      font-size: 14px; font-weight: 700; color: #065f46; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .form-group { margin-bottom: 8px; }
+    .form-label { font-size: 11px; font-weight: 600; color: var(--text-sub); margin-bottom: 4px; display: block; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%; padding: 8px 12px; border: 1.5px solid #a7f3d0; border-radius: 10px;
+      font-size: 12px; background: #fafafa; outline: none; transition: all 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary-green); background: #ffffff; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+
+    .file-input-wrapper {
+      position: relative; border: 1.5px dashed #34d399; border-radius: 10px;
+      padding: 10px; text-align: center; background: var(--mint-light); cursor: pointer;
+    }
+    .file-input-wrapper input[type="file"] { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; z-index: 5; }
+    
+    .upload-prompt-content { display: flex; align-items: center; justify-content: center; gap: 6px; pointer-events: none; }
+    .add-icon-circle {
+      width: 24px; height: 24px; background: var(--primary-green); color: white; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;
+      box-shadow: 0 2px 5px rgba(16,185,129,0.3);
+    }
+
+    /* 录入预览流中的媒体卡片样式（含右上角删除） */
+    .preview-stream { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; max-height: 120px; overflow-y: auto; position: relative; z-index: 6; }
+    .preview-thumb-box { position: relative; width: 50px; height: 50px; flex-shrink: 0; }
+    .preview-thumb { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; background: #000; }
+    .preview-del-btn {
+      position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #ef4444; color: white;
+      border-radius: 50%; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: 1px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 7;
+    }
+    .preview-del-btn:hover { background: #dc2626; }
+
+    .btn {
+      width: 100%; padding: 9px; border-radius: 12px; font-size: 13px; font-weight: 700;
+      border: none; cursor: pointer; transition: all 0.2s transform, shadow;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-green { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+    .btn-green:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(16, 185, 129, 0.4); }
+    .btn-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+    .btn-blue:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(59, 130, 246, 0.4); }
+    .btn-outline-blue { background: #eff6ff; color: #2563eb; border: 1.5px solid #93c5fd; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.1); }
+    .btn-outline-blue:hover { background: #dbeafe; }
+
+    .undo-banner {
+      background: #1e293b; color: white; padding: 8px 12px; border-radius: 10px;
+      font-size: 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+    }
+    .undo-btn { background: #10b981; color: white; border: none; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
+    .undo-btn:hover { background: #059669; }
+
+    .house-list { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+    .house-card {
+      background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;
+      cursor: pointer; transition: all 0.2s; position: relative;
+    }
+    .house-card:hover { border-color: var(--primary-green); background: #f0fdf4; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.1); }
+    .house-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    
+    .media-scroll-box { display: flex; gap: 6px; overflow-x: auto; max-width: 160px; padding-bottom: 4px; }
+    .media-item-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; cursor: zoom-in; border: 1px solid #cbd5e1; flex-shrink: 0; background: #000; }
+    .media-item-thumb:hover { border-color: var(--primary-green); }
+
+    .house-info { flex: 1; }
+    .house-title { font-size: 12px; font-weight: 700; color: #1e293b; }
+    .house-tags { display: flex; gap: 4px; margin-top: 3px; }
+    .tag { font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 600; }
+    .tag-price { background: #ffe4e6; color: #e11d48; }
+    .tag-line { background: #dbeafe; color: #1d4ed8; }
+    
+    .house-card-actions { display: flex; gap: 6px; align-items: flex-start; border-top: 1px dashed #e2e8f0; padding-top: 8px; }
+    .del-btn { background: #fee2e2; color: #ef4444; border: none; padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; white-space: nowrap; height: 28px; }
+    .del-btn:hover { background: #fecaca; }
+
+    .remark-textarea {
+      flex: 1.5; padding: 6px; font-size: 11px; min-height: 28px; max-height: 120px;
+      resize: vertical;
+      border-radius: 8px; border: 1.5px solid #cbd5e1; outline: none; background: #ffffff;
+    }
+    .remark-textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+
+    #mediaModal {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85); z-index: 9999;
+      display: none; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+    }
+    #mediaModal .modal-content-wrap { position: relative; max-width: 90vw; max-height: 80vh; display: flex; align-items: center; justify-content: center; }
+    #mediaModal img, #mediaModal video { max-width: 90vw; max-height: 75vh; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 2px solid white; object-fit: contain; }
+    
+    .modal-actions { margin-top: 15px; display: flex; gap: 12px; }
+    .modal-btn { background: var(--primary-green); color: white; padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: bold; text-decoration: none; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(16,185,129,0.4); }
+    .modal-btn:hover { background: var(--primary-dark); }
+    .modal-close-btn { background: #ef4444; }
+    .modal-close-btn:hover { background: #dc2626; }
+
+    .commute-result {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border: 1.5px solid #93c5fd; border-radius: 12px; padding: 12px;
+      font-size: 12px; color: #1e3a8a; display: none; line-height: 1.6; max-height: 200px; overflow-y: auto;
+    }
+
+    .custom-marker {
+      background: #10b981; color: white; padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 800; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      border: 2px solid white; white-space: nowrap; cursor: pointer;
+    }
+    .work-marker {
+      background: #3b82f6; color: white; padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 800; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      border: 2px solid white; white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-nav { display: flex; }
+      .control-panel {
+        top: 55px; left: 10px; right: 10px; width: auto; max-height: calc(100vh - 70px);
+        padding: 14px; border-radius: 16px;
+      }
+      .columns-wrapper { flex-direction: column; gap: 10px; }
+      .column-left { border-right: none; padding-right: 0; border-bottom: 1px dashed #cbd5e1; padding-bottom: 10px; }
+    }
+    
+    /* ===== 登录页面 ===== */
+
+#loginScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ecfdf5, #dbeafe);
+}
+
+.login-box {
+  width: min(420px, 90vw);
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 24px;
+  padding: 36px 30px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.login-logo {
+  text-align: center;
+  font-size: 42px;
+  margin-bottom: 8px;
+}
+
+.login-box h1 {
+  text-align: center;
+  color: #059669;
+  margin-bottom: 6px;
+  font-size: 26px;
+}
+
+.login-subtitle {
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 26px;
+}
+
+.login-form label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #a7f3d0;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  background: #f8fafc;
+}
+
+.login-form input:focus {
+  border-color: #10b981;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.login-btn {
+  width: 100%;
+  margin-top: 22px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-btn:hover {
+  transform: translateY(-1px);
+}
+
+#loginMessage {
+  min-height: 22px;
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+}
+  </style>
+</head>
+<body>
+  
+<div id="loginScreen">
+  <div class="login-box">
+
+    <div class="login-logo">🌿</div>
+
+    <h1>House-Helper</h1>
+
+    <p class="login-subtitle">私人助手</p>
+
+    <div class="login-form">
+
+      <label>账号</label>
+      <input
+        type="text"
+        id="loginUsername"
+        placeholder="请输入用户名"
+        autocomplete="username"
+      >
+
+      <label>密码</label>
+      <input
+        type="password"
+        id="loginPassword"
+        placeholder="请输入密码"
+        autocomplete="current-password"
+      >
+
+      <button
+  class="login-btn"
+  type="button"
+  onclick="loginUser()">
+  登录
+</button>
+
+      <div id="loginMessage"></div>
+
+    </div>
+
+  </div>
+</div>
+  
+  <div class="mobile-nav">
+    <button class="mobile-tab active" onclick="switchMobileTab('all')">全览模式</button>
+    <button class="mobile-tab" onclick="switchMobileTab('left')">🏡 房源录入</button>
+    <button class="mobile-tab" onclick="switchMobileTab('right')">🎯 客户导航</button>
+    <button class="mobile-tab" onclick="toggleMapOnly()">🗺️ 仅看地图</button>
+  </div>
+
+  <div id="mediaModal">
+    <div class="modal-content-wrap" id="modalContainer"></div>
+    <div class="modal-actions">
+      <a id="downloadBtn" class="modal-btn" href="#" download="房源素材">📥 下载当前文件</a>
+      <button class="modal-btn modal-close-btn" onclick="closeMediaModal()">✕ 关闭预览</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div id="map-container"></div>
+
+    <div class="control-panel" id="mainPanel">
+      <div class="panel-header">
+        <div class="brand-title">
+          <span>🌿 小雨房源地图助手</span>
+        </div>
+      </div>
+
+      <div class="columns-wrapper">
+        
+        <div class="column column-left" id="colLeft">
+          <div class="card">
+            <div class="card-title">
+              <span class="icon">🏡</span> 房源信息录入
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">房源/小区名称</label>
+              <input type="text" id="hName" placeholder="例：滨江金色黎明 3号楼201">
+            </div>
+
+            <div class="form-group" style="display:flex; gap:8px;">
+              <div style="flex:1;">
+                <label class="form-label">月租金 (元/月)</label>
+                <input type="number" id="hPrice" placeholder="例：2500">
+              </div>
+              <div style="flex:1;">
+                <label class="form-label">近地铁/公交</label>
+                <input type="text" id="hLine" placeholder="例：1号线/312路">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">房源相册/视频 (支持多选、追加与单张删除)</label>
+              <div class="file-input-wrapper">
+                <div class="upload-prompt-content">
+                  <div class="add-icon-circle">+</div>
+                  <span id="filePrompt" style="font-size:11px; color:#059669; font-weight:600;">点击选择或追加多张照片/视频</span>
+                </div>
+                <input type="file" id="hMediaFiles" accept="image/*,video/*" multiple onchange="previewMultiMedia(this)">
+              </div>
+              <!-- 独立出来的上传实时预览流，支持单张删除 -->
+              <div id="uploadPreviewStream" class="preview-stream"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">地图选点位置</label>
+              <input type="text" id="hLngLat" placeholder="点击右侧地图上任意位置" readonly style="background:#f1f5f9;">
+            </div>
+
+            <button class="btn btn-green" onclick="saveHouse()">✨ 保存新房源</button>
+          </div>
+
+          <!-- 已录入房源清单 -->
+          <div class="card">
+            <div class="card-title">
+              <span class="icon">📋</span> 已存房源清单 (<span id="houseCount">0</span>) 
+            </div>
+
+            <!-- 删除撤销提示横幅 -->
+            <div id="undoBanner" class="undo-banner" style="display:none;">
+              <span id="undoText">已删除房源</span>
+              <button class="undo-btn" onclick="undoDelete()">↩ 撤销删除</button>
+            </div>
+
+            <div class="house-list" id="houseList"></div>
+          </div>
+        </div>
+
+        <div class="column" id="colRight">
+          <div class="card">
+            <div class="card-title">
+              <span class="icon">🎯</span> 客户需求筛选
+            </div>
+
+            <div class="form-group" style="display:flex; gap:8px;">
+              <div style="flex:1;">
+                <label class="form-label">最高月租预算 (元)</label>
+                <input type="number" id="filterMaxPrice" placeholder="如: 3000" oninput="renderHouses()">
+              </div>
+              <div style="flex:1;">
+                <label class="form-label">期望公交/地铁</label>
+                <input type="text" id="filterLine" placeholder="如: 1号线" oninput="renderHouses()">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span class="icon">🧭</span> 上班便捷路线导航
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">① 设置上班起点 (公司/大厦)</label>
+              <div style="display:flex; gap:6px; margin-bottom: 4px;">
+                <input type="text" id="workAddress" placeholder="输入公司名，或点击右侧按钮地图选点" style="flex:1;">
+                <button class="btn btn-outline-blue" style="width:auto; padding:6px 10px; font-size:11px; white-space:nowrap;" onclick="enableWorkPickMode()">🗺️ 地图选点</button>
+              </div>
+              <input type="text" id="workLngLat" placeholder="尚未选择起点坐标" readonly style="background:#f1f5f9; font-size:10px; color:#64748b;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">② 选择目标预算房源</label>
+              <select id="selectHouseForCommute">
+                <option value="">请先在左侧保存房源...</option>
+              </select>
+            </div>
+
+            <button class="btn btn-blue" onclick="calculateCommute()">🚀 ③ 一键查询上班便捷路线</button>
+
+            <div id="commuteResult" class="commute-result" style="margin-top:10px;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+// ===== CloudBase 配置 =====
+const CLOUDBASE_ENV = "house-helper-prod-d1df1j949f6374";
+
+// ===== 初始化 CloudBase v3 =====
+const cloudApp = cloudbase.init({
+  env: CLOUDBASE_ENV,
+  accessKey: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjA1YmVlZDg3LWI2MzgtNGE5NC1hOWNkLWVhNDk5ZTUwNWE1ZSJ9.eyJpc3MiOiJodHRwczovL2hvdXNlLWhlbHBlci1wcm9kLWQxZGYxajk0OWY2Mzc0LmFwLXNoYW5naGFpLnRjYi1hcGkudGVuY2VudGNsb3VkYXBpLmNvbSIsInN1YiI6ImFub24iLCJhdWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsImV4cCI6NDA5MTU5MTgzOSwiaWF0IjoxNzg3OTA4NjM5LCJub25jZSI6IkNzaWl0elNzUWdtam04RTZUTjhQZ2ciLCJhdF9oYXNoIjoiQ3NpaXR6U3NRZ21qbThFNlROOFBnZyIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.zrzL8s1Bt-aHZOe43ncPH7aTaY6JF0wdCJR41LUYkrROOYRMgFfKCNm58H-qHyuV2AzbTsq0_Snptm9_hKwwgJr04rQgq4HI2eGlR-WkeHLrNHCbTqGLZMVA88xZf_GQ8t16r8d0CWTtJXGuVvqUVDfVBfipsfgCMRVMHRL-F4aZJa6T7bm58mIJSbUn9oQNBM5WJb6uzIIGf-e-F3ljN49fo6nwKmhOZQyz5ShWJTBGOSIXp3fEKh0ZBkPMCvicn_dy4xfpF7lK3N2M7OQ9DitDIve7VRzulvtIfdzwEH2h5gOPJc6xgbSpwA2CQnyqs5xJ6nwA0KeTbRapiQntRg"
+});
+
+// CloudBase v3：auth 是属性，不要加 ()
+window.cloudAuth = cloudApp.auth;
+
+// ===== 登录 =====
+async function loginUser() {
+  const username = document.getElementById("loginUsername").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const messageEl = document.getElementById("loginMessage");
+
+  if (!username || !password) {
+    messageEl.innerText = "请输入账号和密码";
+    messageEl.style.color = "#ef4444";
+    return;
+  }
+
+  messageEl.innerText = "正在登录...";
+  messageEl.style.color = "#64748b";
+
+  try {
+   const { data, error } = await window.cloudAuth.signInWithPassword({
+      username: username,
+      password: password
+    });
+
+    console.log("CloudBase 登录结果：", data);
+
+    if (error) {
+      throw error;
+    }
+
+    messageEl.innerText = "登录成功，正在进入...";
+    messageEl.style.color = "#059669";
+
+    setTimeout(() => {
+      document.getElementById("loginScreen").style.display = "none";
+    }, 500);
+
+  } catch (error) {
+    console.error("登录失败：", error);
+
+    messageEl.innerText =
+      "登录失败：" + (error.message || "未知错误");
+
+    messageEl.style.color = "#ef4444";
+  }
+}
+
+let map, transferService, geocoder, transferPlugin;
+    let markers = [];
+    let selectedLngLat = null;
+    let workSelectedLngLat = null;
+    let isPickingWorkLocation = false;
+    let workMarker = null;
+    let currentUploadedMedia = []; // 完整保存原图/视频 Base64 数组
+    let recentlyDeletedHouse = null; 
+    let undoTimer = null;
+
+    let houses = JSON.parse(localStorage.getItem('xiaoyu_houses_hz_v8')) || [
+      { id: 101, name: "示范房源-滨江金色黎明", price: 2800, line: "1号线", media: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&q=80"], lnglat: [120.210, 30.250], status: "待出租", remark: "随时看房，采光好。" },
+      { id: 102, name: "示范房源-文鼎苑", price: 3500, line: "2号线", media: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=80"], lnglat: [120.100, 30.300], status: "预定中", remark: "客户考虑中。" }
+    ];
+
+    function initMap() {
+      try {
+        map = new AMap.Map('map-container', { zoom: 13, center: [120.15507, 30.27408] });
+
+        AMap.plugin(['AMap.Transfer', 'AMap.Geocoder'], function() {
+          transferService = new AMap.Transfer({ city: '杭州', policy: AMap.TransferPolicy.LEAST_TIME });
+          geocoder = new AMap.Geocoder();
+        });
+
+        map.on('click', function(e) {
+          const lnglat = [e.lnglat.getLng(), e.lnglat.getLat()];
+
+          if (isPickingWorkLocation) {
+            workSelectedLngLat = lnglat;
+            document.getElementById('workLngLat').value = `已选坐标: ${lnglat.map(n => n.toFixed(5)).join(', ')}`;
+            
+            geocoder.getAddress(lnglat, function(status, result) {
+              if (status === 'complete' && result.regeocode) {
+                document.getElementById('workAddress').value = result.regeocode.formattedAddress;
+              } else {
+                document.getElementById('workAddress').value = `自定义坐标点(${lnglat[0].toFixed(3)}, ${lnglat[1].toFixed(3)})`;
+              }
+            });
+
+            if (workMarker) workMarker.setMap(null);
+            const wContent = document.createElement('div');
+            wContent.className = 'work-marker';
+            wContent.innerHTML = `🏢 上班起点`;
+            workMarker = new AMap.Marker({ position: lnglat, content: wContent, offset: new AMap.Pixel(-40, -20) });
+            workMarker.setMap(map);
+
+            isPickingWorkLocation = false;
+            alert("✅ 上班起点已通过地图选定！");
+          } else {
+            selectedLngLat = lnglat;
+            document.getElementById('hLngLat').value = lnglat.map(n => n.toFixed(5)).join(', ');
+          }
+        });
+
+        renderHouses();
+      } catch (err) {
+        console.error("高德地图加载失败:", err);
+      }
+    }
+
+    function enableWorkPickMode() {
+      isPickingWorkLocation = true;
+      alert("👉 请在左侧的【地图】上直接点击上班地点位置！");
+    }
+
+    // 不压缩，完整读取原图/视频，并在预览流中展示带“×”的单张删除功能
+    function previewMultiMedia(input) {
+      if (input.files && input.files.length > 0) {
+        Array.from(input.files).forEach(file => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const base64Data = e.target.result;
+            currentUploadedMedia.push(base64Data);
+            renderUploadPreviewStream();
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+
+    // 渲染录入时的多媒体预览流（附带移除单张按钮）
+    function renderUploadPreviewStream() {
+      const streamContainer = document.getElementById('uploadPreviewStream');
+      streamContainer.innerHTML = '';
+
+      currentUploadedMedia.forEach((src, index) => {
+        const box = document.createElement('div');
+        box.className = 'preview-thumb-box';
+
+        let mediaEl = '';
+        if (src.startsWith('data:video') || src.endsWith('.mp4') || src.endsWith('.mov')) {
+          mediaEl = `<video src="${src}" class="preview-thumb"></video>`;
+        } else {
+          mediaEl = `<img src="${src}" class="preview-thumb">`;
+        }
+
+        box.innerHTML = `
+          ${mediaEl}
+          <div class="preview-del-btn" title="删除该张图片/视频" onclick="removeUploadedMedia(${index})">×</div>
+        `;
+        streamContainer.appendChild(box);
+      });
+
+      const promptSpan = document.getElementById('filePrompt');
+      if (currentUploadedMedia.length > 0) {
+        promptSpan.innerText = `已选择 ${currentUploadedMedia.length} 个文件（可继续追加）`;
+      } else {
+        promptSpan.innerText = "点击选择或追加多张照片/视频";
+      }
+    }
+
+    // 删除正在录入列表中的某一个媒体文件
+    function removeUploadedMedia(index) {
+      currentUploadedMedia.splice(index, 1);
+      renderUploadPreviewStream();
+      document.getElementById('hMediaFiles').value = ''; // 允许重复选同名文件
+    }
+
+    function openMediaModal(mediaSrc, event) {
+      event.stopPropagation();
+      const modal = document.getElementById('mediaModal');
+      const container = document.getElementById('modalContainer');
+      const downloadBtn = document.getElementById('downloadBtn');
+
+      container.innerHTML = '';
+      downloadBtn.href = mediaSrc;
+
+      if (mediaSrc.startsWith('data:video') || mediaSrc.endsWith('.mp4') || mediaSrc.endsWith('.mov')) {
+        const videoEl = document.createElement('video');
+        videoEl.src = mediaSrc;
+        videoEl.controls = true;
+        videoEl.autoplay = true;
+        container.appendChild(videoEl);
+        downloadBtn.download = "房源视频.mp4";
+      } else {
+        const imgEl = document.createElement('img');
+        imgEl.src = mediaSrc;
+        container.appendChild(imgEl);
+        downloadBtn.download = "房源照片.jpg";
+      }
+
+      modal.style.display = 'flex';
+    }
+
+    function closeMediaModal() {
+      const modal = document.getElementById('mediaModal');
+      modal.style.display = 'none';
+      document.getElementById('modalContainer').innerHTML = '';
+    }
+
+    function saveHouse() {
+      const name = document.getElementById('hName').value.trim();
+      const price = Number(document.getElementById('hPrice').value);
+      const line = document.getElementById('hLine').value.trim();
+
+      if (!name || !price || !selectedLngLat) {
+        alert("请完整填写【房源名称】、【月租金】，并在【地图上点击选择位置】！");
+        return;
+      }
+
+      const defaultImages = ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&q=80"];
+
+      const newHouse = {
+        id: Date.now(),
+        name: name,
+        price: price,
+        line: line || '未标注路线',
+        media: currentUploadedMedia.length > 0 ? currentUploadedMedia : defaultImages,
+        lnglat: selectedLngLat,
+        status: "待出租",
+        remark: ""
+      };
+
+      houses.push(newHouse);
+      
+      try {
+        localStorage.setItem('xiaoyu_houses_hz_v8', JSON.stringify(houses));
+      } catch (e) {
+        alert("浏览器本地存储空间超限！您上传的图片/视频原图体积过大，请适当删减部分文件或换小一点的照片。");
+        houses.pop(); // 回滚
+        return;
+      }
+
+      // 重置表单
+      document.getElementById('hName').value = '';
+      document.getElementById('hPrice').value = '';
+      document.getElementById('hLine').value = '';
+      document.getElementById('hLngLat').value = '';
+      document.getElementById('hMediaFiles').value = ''; 
+      currentUploadedMedia = [];
+      renderUploadPreviewStream();
+      selectedLngLat = null;
+
+      renderHouses();
+      alert("🎉 房源保存成功！");
+    }
+
+    // 删除并弹出二次确认通知 + 顶部可撤销横幅
+    function deleteHouse(id, event) {
+      event.stopPropagation();
+      const houseToDelete = houses.find(h => h.id === id);
+      if (!houseToDelete) return;
+
+      // 二次确认弹窗通知
+      const isConfirmed = confirm(`⚠️ 二次确认：您确定要彻底删除房源【${houseToDelete.name}】吗？删除后可在下方顶部点击“撤销删除”恢复。`);
+      if (!isConfirmed) return;
+
+      const index = houses.findIndex(h => h.id === id);
+      if (index > -1) {
+        recentlyDeletedHouse = { house: houses[index], index: index };
+        houses.splice(index, 1);
+        localStorage.setItem('xiaoyu_houses_hz_v8', JSON.stringify(houses));
+        renderHouses();
+
+        const banner = document.getElementById('undoBanner');
+        document.getElementById('undoText').innerText = `已删除：“${recentlyDeletedHouse.house.name}”`;
+        banner.style.display = 'flex';
+
+        if (undoTimer) clearTimeout(undoTimer);
+        undoTimer = setTimeout(() => {
+          banner.style.display = 'none';
+          recentlyDeletedHouse = null;
+        }, 10000); // 10秒内可点击撤销
+      }
+    }
+
+    function undoDelete() {
+      if (recentlyDeletedHouse) {
+        houses.splice(recentlyDeletedHouse.index, 0, recentlyDeletedHouse.house);
+        localStorage.setItem('xiaoyu_houses_hz_v8', JSON.stringify(houses));
+        renderHouses();
+        document.getElementById('undoBanner').style.display = 'none';
+        recentlyDeletedHouse = null;
+        if (undoTimer) clearTimeout(undoTimer);
+      }
+    }
+
+    function updateHouseStatus(id, newStatus, event) {
+      event.stopPropagation();
+      const house = houses.find(h => h.id === id);
+      if (house) {
+        house.status = newStatus;
+        localStorage.setItem('xiaoyu_houses_hz_v8', JSON.stringify(houses));
+      }
+    }
+
+    function updateHouseRemark(id, newRemark, event) {
+      event.stopPropagation();
+      const house = houses.find(h => h.id === id);
+      if (house) {
+        house.remark = newRemark;
+        localStorage.setItem('xiaoyu_houses_hz_v8', JSON.stringify(houses));
+      }
+    }
+
+    function panToHouse(lnglat) {
+      if (map) {
+        map.setCenter(lnglat);
+        map.setZoom(16);
+      }
+    }
+
+    function renderHouses() {
+      if (!map) return;
+      markers.forEach(m => m.setMap(null));
+      markers = [];
+
+      const maxPrice = Number(document.getElementById('filterMaxPrice').value) || Infinity;
+      const lineFilter = document.getElementById('filterLine').value.trim().toLowerCase();
+
+      const listEl = document.getElementById('houseList');
+      const selectEl = document.getElementById('selectHouseForCommute');
+      listEl.innerHTML = '';
+      selectEl.innerHTML = '<option value="">请选择要测算的房源...</option>';
+
+      let visibleCount = 0;
+
+      houses.forEach(house => {
+        if (house.price > maxPrice) return;
+        if (lineFilter && !house.line.toLowerCase().includes(lineFilter)) return;
+
+        visibleCount++;
+
+        const markerContent = document.createElement('div');
+        markerContent.className = 'custom-marker';
+        markerContent.innerHTML = `🏠 ${house.name} | ¥${house.price}`;
+        markerContent.onclick = () => { panToHouse(house.lnglat); };
+
+        const marker = new AMap.Marker({
+          position: house.lnglat,
+          content: markerContent,
+          offset: new AMap.Pixel(-50, -20)
+        });
+        marker.setMap(map);
+        markers.push(marker);
+
+        let mediaHtml = '';
+        if (house.media && house.media.length > 0) {
+          house.media.forEach(src => {
+            if (src.startsWith('data:video') || src.endsWith('.mp4') || src.endsWith('.mov')) {
+              mediaHtml += `<video src="${src}" class="media-item-thumb" title="点击播放并下载视频" onclick="openMediaModal('${src}', event)"></video>`;
+            } else {
+              mediaHtml += `<img src="${src}" class="media-item-thumb" title="点击查看大图并下载" onclick="openMediaModal('${src}', event)">`;
+            }
+          });
+        }
+
+        const card = document.createElement('div');
+        card.className = 'house-card';
+        card.onclick = () => panToHouse(house.lnglat);
+
+        card.innerHTML = `
+          <div class="house-card-top">
+            <div class="media-scroll-box">${mediaHtml}</div>
+            <div class="house-info">
+              <div class="house-title">${house.name}</div>
+              <div class="house-tags">
+                <span class="tag tag-price">¥${house.price}/月</span>
+                <span class="tag tag-line">${house.line}</span>
+              </div>
+            </div>
+          </div>
+          <div class="house-card-actions" onclick="event.stopPropagation()">
+            <select style="flex:1; padding:5px 6px; font-size:11px; height:28px;" onchange="updateHouseStatus(${house.id}, this.value, event)">
+              <option value="待出租" ${house.status === '待出租' ? 'selected' : ''}>🟢 待出租</option>
+              <option value="预定中" ${house.status === '预定中' ? 'selected' : ''}>🟡 预定中</option>
+              <option value="已出租" ${house.status === '已出租' ? 'selected' : ''}>🔴 已出租</option>
+            </select>
+            <textarea class="remark-textarea" placeholder="填写备注..." oninput="updateHouseRemark(${house.id}, this.value, event)">${house.remark || ''}</textarea>
+            <button class="del-btn" onclick="deleteHouse(${house.id}, event)">删除</button>
+          </div>
+        `;
+        listEl.appendChild(card);
+
+        const opt = document.createElement('option');
+        opt.value = house.id;
+        opt.innerText = `${house.name} (¥${house.price}/月 - ${house.line})`;
+        selectEl.appendChild(opt);
+      });
+
+      document.getElementById('houseCount').innerText = visibleCount;
+    }
+
+    function calculateCommute() {
+      const workAddr = document.getElementById('workAddress').value.trim();
+      const houseId = Number(document.getElementById('selectHouseForCommute').value);
+      const resultBox = document.getElementById('commuteResult');
+
+      if (!workAddr && !workSelectedLngLat) {
+        alert("请先设置上班起点！");
+        return;
+      }
+      if (!houseId) {
+        alert("请选择一套目标预算房源！");
+        return;
+      }
+
+      const house = houses.find(h => h.id === houseId);
+      if (!house) return;
+
+      resultBox.style.display = 'block';
+      resultBox.innerHTML = "🧭 正在为您规划最优换乘导航路线...";
+
+      if (transferPlugin) {
+        transferPlugin.clear();
+      }
+
+      if (workSelectedLngLat) {
+        executeTransferSearch(workSelectedLngLat, house, workAddr || "自定义起点");
+      } else {
+        geocoder.getLocation(workAddr, function(status, result) {
+          if (status === 'complete' && result.geocodes.length) {
+            const workLngLat = [result.geocodes[0].location.lng, result.geocodes[0].location.lat];
+            executeTransferSearch(workLngLat, house, workAddr);
+          } else {
+            resultBox.innerHTML = "❌ 无法解析该上班地址，请尝试使用【地图选点】功能直接选定。";
+          }
+        });
+      }
+    }
+
+    function executeTransferSearch(workLngLat, house, workName) {
+      const resultBox = document.getElementById('commuteResult');
+
+      transferPlugin = new AMap.Transfer({
+        map: map,
+        policy: AMap.TransferPolicy.LEAST_TIME,
+        city: '杭州'
+      });
+
+      transferPlugin.search(house.lnglat, workLngLat, function(tStatus, tResult) {
+        if (tStatus === 'complete' && tResult.plans && tResult.plans.length) {
+          const plan = tResult.plans[0];
+          const timeMin = Math.ceil(plan.time / 60);
+          const walkDist = plan.walking_distance ? (plan.walking_distance / 1000).toFixed(1) : 0;
+
+          let stepsHtml = '';
+          if (plan.segments) {
+            plan.segments.forEach((seg, index) => {
+              if (seg.transit && seg.transit.lines && seg.transit.lines[0]) {
+                const lineName = seg.transit.lines[0].name.split('(')[0];
+                stepsHtml += `<li><b>第 ${index + 1} 步:</b> 乘坐 <span style="color:#059669;">${lineName}</span></li>`;
+              } else if (seg.walking && seg.walking.distance > 50) {
+                stepsHtml += `<li><b>步行:</b> 约 ${seg.walking.distance} 米</li>`;
+              }
+            });
+          }
+
+          resultBox.innerHTML = `
+            🚀 <strong>导航规划方案：</strong><br>
+            📍 <strong>从:</strong> ${house.name} ➔ <strong>至:</strong> ${workName}<br>
+            ⏱️ <strong>全程预计:</strong> <span style="font-weight:bold; color:#059669; font-size:14px;">${timeMin} 分钟</span> (步行约 ${walkDist} 公里)<br>
+            🗺️ <strong>换乘指引:</strong>
+            <ul style="margin-left: 16px; margin-top: 4px; font-size: 11px;">
+              ${stepsHtml || '<li>建议按常规公共交通出行</li>'}
+            </ul>
+          `;
+        } else {
+          resultBox.innerHTML = "❌ 未能查询到合适的公共交通换乘方案。";
+        }
+      });
+    }
+
+    function switchMobileTab(tab) {
+      const colLeft = document.getElementById('colLeft');
+      const colRight = document.getElementById('colRight');
+      const panel = document.getElementById('mainPanel');
+      panel.style.display = 'flex';
+      document.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
+
+      if (tab === 'all') {
+        colLeft.style.display = 'flex';
+        colRight.style.display = 'flex';
+        event.target.classList.add('active');
+      } else if (tab === 'left') {
+        colLeft.style.display = 'flex';
+        colRight.style.display = 'none';
+        event.target.classList.add('active');
+      } else if (tab === 'right') {
+        colLeft.style.display = 'none';
+        colRight.style.display = 'flex';
+        event.target.classList.add('active');
+      }
+    }
+
+    function toggleMapOnly() {
+      const panel = document.getElementById('mainPanel');
+      panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+      document.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    window.onload = initMap;
+  </script>
+</body>
+</html>
