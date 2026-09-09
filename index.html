@@ -13,7 +13,7 @@
   <!-- 引入高德地图 JS API v2.0 -->
   <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=28927eec25e239388ac61dd118b8034b&plugin=AMap.Transfer,AMap.Geocoder,AMap.AutoComplete,AMap.PlaceSearch"></script>
   
-<script src="https://static.cloudbase.net/cloudbase-js-sdk/3.0.0/cloudbase.full.js"></script>
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/3.0.1/cloudbase.full.js"></script>
   
   <style>
     :root {
@@ -335,10 +335,10 @@
 </div>
   
   <div class="mobile-nav">
-    <button class="mobile-tab active" onclick="switchMobileTab('all')">全览模式</button>
-    <button class="mobile-tab" onclick="switchMobileTab('left')">🏡 房源录入</button>
-    <button class="mobile-tab" onclick="switchMobileTab('right')">🎯 客户导航</button>
-    <button class="mobile-tab" onclick="toggleMapOnly()">🗺️ 仅看地图</button>
+    <button class="mobile-tab active" onclick="switchMobileTab('all', event)">全览模式</button>
+    <button class="mobile-tab" onclick="switchMobileTab('left', event)">🏡 房源录入</button>
+    <button class="mobile-tab" onclick="switchMobileTab('right', event)">🎯 客户导航</button>
+    <button class="mobile-tab" onclick="toggleMapOnly(event)">🗺️ 仅看地图</button>
   </div>
 
   <div id="mediaModal">
@@ -476,11 +476,9 @@ const CLOUDBASE_ENV = "house-helper-prod-d1df1j949f6374";
 // ===== 初始化 CloudBase v3 =====
 const cloudApp = cloudbase.init({
   env: CLOUDBASE_ENV,
-  accessKey: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjA1YmVlZDg3LWI2MzgtNGE5NC1hOWNkLWVhNDk5ZTUwNWE1ZSJ9.eyJpc3MiOiJodHRwczovL2hvdXNlLWhlbHBlci1wcm9kLWQxZGYxajk0OWY2Mzc0LmFwLXNoYW5naGFpLnRjYi1hcGkudGVuY2VudGNsb3VkYXBpLmNvbSIsInN1YiI6ImFub24iLCJhdWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsImV4cCI6NDA5MTU5MTgzOSwiaWF0IjoxNzg3OTA4NjM5LCJub25jZSI6IkNzaWl0elNzUWdtam04RTZUTjhQZ2ciLCJhdF9oYXNoIjoiQ3NpaXR6U3NRZ21qbThFNlROOFBnZyIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.zrzL8s1Bt-aHZOe43ncPH7aTaY6JF0wdCJR41LUYkrROOYRMgFfKCNm58H-qHyuV2AzbTsq0_Snptm9_hKwwgJr04rQgq4HI2eGlR-WkeHLrNHCbTqGLZMVA88xZf_GQ8t16r8d0CWTtJXGuVvqUVDfVBfipsfgCMRVMHRL-F4aZJa6T7bm58mIJSbUn9oQNBM5WJb6uzIIGf-e-F3ljN49fo6nwKmhOZQyz5ShWJTBGOSIXp3fEKh0ZBkPMCvicn_dy4xfpF7lK3N2M7OQ9DitDIve7VRzulvtIfdzwEH2h5gOPJc6xgbSpwA2CQnyqs5xJ6nwA0KeTbRapiQntRg"
+  region: "ap-shanghai",
+  accessKey: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjA1YmVlZDg3LWI2MzgtNGE5NC1hOWNkLWVhNDk5ZTUwNWE1ZSJ9.eyJpc3MiOiJodHRwczovL2hvdXNlLWhlbHBlci1wcm9kLWQxZGYxajk0OWY2Mzc0LmFwLXNoYW5naGFpLnRjYi1hcGkudGVuY2VudGNsb3VkYXBpLmNvbSIsInN1YiI6ImFub24iLCJhdWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsImV4cCI6NDA5MTU5MTgzOSwiaWF0IjoxNzg3OTA4NjM5LCJub25jZSI6IkNzaWl0elNzUWdtam04RTZUTjhQZ2ciLCJhdF9oYXNoIjoiQ3NpaXR6U3NRZ21qbThFNlROOFBnZyIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbnltb3VzIiwiaXNfYW5vbnltb3VzIjp0cnVlLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJhbm9ueW1vdXMiLCJwcm92aWRlcnMiOlsiYW5vbnltb3VzIl19LCJ1c2VyX21ldGFkYXRhIjp7Im5hbWUiOiJBbm9ueW1vdXMifSwidXNlcl90eXBlIjoiIiwiY2xpZW50X3R5cGUiOiJjbGllbnRfdXNlciIsImlzX3N5c3RlbV9hZG1pbiI6ZmFsc2V9.zrzL8s1Bt-aHZOe43ncPH7aTaY6JF0wdCJR41LUYkrROOYRMgFfKCNm58H-qHyuV2AzbTsq0_Snptm9_hKwwgJr04rQgq4HI2eGlR-WkeHLrNHCbTqGLZMVA88xZf_GQ8t16r8d0CWTtJXGuVvqUVDfVBfipsfgCMRVMHRL-F4aZJa6T7bm58mIJSbUn9oQNBM5WJb6uzIIGf-e-F3ljN49fo6nwKmhOZQyz5ShWJTBGOSIXp3fEKh0ZBkPMCvicn_dy4xfpF7lK3N2M7OQ9DitDIve7VRzulvtIfdzwEH2h5gOPJc6xgbSpwA2CQnyqs5xJ6nwA0KeTbRapiQntRg"
 });
-
-// CloudBase v3：auth 是一个方法，需要调用
-const cloudAuth = cloudApp.auth();
 
 // ===== 登录 =====
 async function loginUser() {
@@ -498,9 +496,16 @@ async function loginUser() {
   messageEl.style.color = "#64748b";
 
   try {
-   const { data, error } = await cloudAuth.signInWithPassword({
-      username: username,
-      password: password
+    // CloudBase v3：auth 是属性，不是函数
+    const auth = cloudApp.auth;
+
+    if (!auth || typeof auth.signInWithPassword !== "function") {
+      throw new Error("CloudBase 认证模块未正确加载，请刷新页面后重试。");
+    }
+
+    const { data, error } = await auth.signInWithPassword({
+      username,
+      password
     });
 
     console.log("CloudBase 登录结果：", data);
@@ -519,9 +524,12 @@ async function loginUser() {
   } catch (error) {
     console.error("登录失败：", error);
 
-    messageEl.innerText =
-      "登录失败：" + (error.message || "未知错误");
+    const detail =
+      error?.message ||
+      error?.error_description ||
+      (typeof error === "string" ? error : JSON.stringify(error));
 
+    messageEl.innerText = "登录失败：" + detail;
     messageEl.style.color = "#ef4444";
   }
 }
@@ -949,7 +957,7 @@ let map, transferService, geocoder, transferPlugin;
       });
     }
 
-    function switchMobileTab(tab) {
+    function switchMobileTab(tab, evt) {
       const colLeft = document.getElementById('colLeft');
       const colRight = document.getElementById('colRight');
       const panel = document.getElementById('mainPanel');
@@ -959,23 +967,23 @@ let map, transferService, geocoder, transferPlugin;
       if (tab === 'all') {
         colLeft.style.display = 'flex';
         colRight.style.display = 'flex';
-        event.target.classList.add('active');
+        evt?.target?.classList.add('active');
       } else if (tab === 'left') {
         colLeft.style.display = 'flex';
         colRight.style.display = 'none';
-        event.target.classList.add('active');
+        evt?.target?.classList.add('active');
       } else if (tab === 'right') {
         colLeft.style.display = 'none';
         colRight.style.display = 'flex';
-        event.target.classList.add('active');
+        evt?.target?.classList.add('active');
       }
     }
 
-    function toggleMapOnly() {
+    function toggleMapOnly(evt) {
       const panel = document.getElementById('mainPanel');
       panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
       document.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
+      evt?.target?.classList.add('active');
     }
 
     window.onload = initMap;
