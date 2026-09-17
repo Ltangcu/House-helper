@@ -13,7 +13,7 @@
   <!-- 引入高德地图 JS API v2.0 -->
   <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=28927eec25e239388ac61dd118b8034b&plugin=AMap.Transfer,AMap.Geocoder,AMap.AutoComplete,AMap.PlaceSearch"></script>
   
-<script src="https://static.cloudbase.net/cloudbase-js-sdk/3.0.0/cloudbase.full.js"></script>
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
   
   <style>
     :root {
@@ -473,7 +473,7 @@
 // ===== CloudBase 配置 =====
 const CLOUDBASE_ENV = "house-helper-prod-d1df1j949f6374";
 
-// ===== 登录 =====
+// ===== CloudBase 登录 =====
 async function loginUser() {
   const loginInput = document.getElementById("loginUsername").value.trim();
   const password = document.getElementById("loginPassword").value;
@@ -489,8 +489,8 @@ async function loginUser() {
   messageEl.style.color = "#64748b";
 
   try {
-    if (!window.cloudbase || typeof window.cloudbase.init !== "function") {
-      throw new Error("CloudBase SDK 未加载，请检查 SDK 地址并刷新页面。");
+    if (typeof window.cloudbase === "undefined" || typeof window.cloudbase.init !== "function") {
+      throw new Error("CloudBase SDK 未加载，请刷新页面后重试。");
     }
 
     const app = window.cloudbase.init({
@@ -499,14 +499,13 @@ async function loginUser() {
       accessKey: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjA1YmVlZDg3LWI2MzgtNGE5NC1hOWNkLWVhNDk5ZTUwNWE1ZSJ9.eyJpc3MiOiJodHRwczovL2hvdXNlLWhlbHBlci1wcm9kLWQxZGYxajk0OWY2Mzc0LmFwLXNoYW5naGFpLnRjYi1hcGkudGVuY2VudGNsb3VkYXBpLmNvbSIsInN1YiI6ImFub24iLCJhdWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsImV4cCI6NDA5MTU5MTgzOSwiaWF0IjoxNzg3OTA4NjM5LCJub25jZSI6IkNzaWl0elNzUWdtam04RTZUTjhQZ2ciLCJhdF9oYXNoIjoiQ3NpaXR6U3NRZ21qbThFNlROOFBnZyIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJob3VzZS1oZWxwZXItcHJvZC1kMWRmMWo5NDlmNjM3NCIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.zrzL8s1Bt-aHZOe43ncPH7aTaY6JF0wdCJR41LUYkrROOYRMgFfKCNm58H-qHyuV2AzbTsq0_Snptm9_hKwwgJr04rQgq4HI2eGlR-WkeHLrNHCbTqGLZMVA88xZf_GQ8t16r8d0CWTtJXGuVvqUVDfVBfipsfgCMRVMHRL-F4aZJa6T7bm58mIJSbUn9oQNBM5WJb6uzIIGf-e-F3ljN49fo6nwKmhOZQyz5ShWJTBGOSIXp3fEKh0ZBkPMCvicn_dy4xfpF7lK3N2M7OQ9DitDIve7VRzulvtIfdzwEH2h5gOPJc6xgbSpwA2CQnyqs5xJ6nwA0KeTbRapiQntRg"
     });
 
-    // 兼容不同 Web SDK 版本：有的版本使用 auth()，有的版本直接使用 auth 属性
+    // 兼容 CloudBase 不同 SDK 版本：v2/兼容模式为 auth()，v3 为 auth 属性
     const auth = typeof app.auth === "function" ? app.auth() : app.auth;
 
     if (!auth || typeof auth.signInWithPassword !== "function") {
-      throw new Error("CloudBase 登录接口未加载，请检查当前 SDK 版本。");
+      throw new Error("CloudBase 登录接口未正确加载，请检查当前 SDK 版本。");
     }
 
-    // 自动识别：用户名 / 邮箱 / 手机号
     const loginParams = { password };
     if (loginInput.includes("@")) {
       loginParams.email = loginInput;
@@ -519,10 +518,10 @@ async function loginUser() {
       console.log("当前登录方式：用户名");
     }
 
-    const result = await auth.signInWithPassword(loginParams);
-    console.log("CloudBase 登录结果：", result?.data || result);
+    const { data, error } = await auth.signInWithPassword(loginParams);
+    console.log("CloudBase 登录结果：", data);
 
-    if (result?.error) throw result.error;
+    if (error) throw error;
 
     messageEl.innerText = "登录成功，正在进入...";
     messageEl.style.color = "#059669";
@@ -530,7 +529,6 @@ async function loginUser() {
     setTimeout(() => {
       document.getElementById("loginScreen").style.display = "none";
     }, 500);
-
   } catch (error) {
     console.error("登录失败：", error);
 
