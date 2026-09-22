@@ -19,7 +19,7 @@
 3. **使用正确的 SDK 与 API**
    - 小程序客户端按需使用 `wx.cloud.database()`、`wx.cloud.callFunction()`、`wx.cloud.uploadFile()`。
    - 不要在小程序中使用 Web SDK 认证模式。
-   - 可用时通过 `envQuery` 获取环境 ID。
+   - 可用时通过 `queryEnv` 获取环境 ID。
 
 4. **选择正确的云执行面**
    - **微信云开发 = CloudBase × 微信。** Nightly 开发者工具 Skills 可用时，日常小程序云操作（环境列表、NoSQL、云函数、云存储）优先用 `wechatide` / `cloudbase-operator` + 微信登录。见 [devtools-debug-preview.md](devtools-debug-preview.md) 与 [wxide-vs-cloudbase-mcp.md](wxide-vs-cloudbase-mcp.md)。
@@ -53,6 +53,14 @@
      - `npx mcporter call cloudbase.auth action=start_auth authMode=device --output json`
      - `npx mcporter call cloudbase.auth action=set_env envId=env-xxx --output json`
 
+## 0. 环境开通（动手前先确认）
+
+- 确认用户用的是**正式注册的小程序账号**：微信测试号不支持云开发，开发者工具里「云开发」按钮为灰色，容易被误判为云开发故障。个人主体注册正式小程序免费。
+- 开通云开发**优先在微信开发者工具里点「云开发」按钮**：环境自动与当前小程序关联。不要先去腾讯云控制台创建——腾讯云侧创建的环境小程序端用不了（暂时只支持 Web 端），后续要补做账号绑定 + 环境转换。
+- 开通过程弹出登录页面时，选择**「微信公众平台登录」**。
+- 开通前提：腾讯云账号已完成**实名认证**——未实名会创建失败且报错不明显（只在控制台右上角小字提示）。
+- 开通步骤与已有腾讯云环境的绑定转换见官方文档：https://docs.cloudbase.net/quick-start/create-env
+
 ## 1. 环境初始化
 
 使用 CloudBase 的小程序应在应用启动时初始化一次 `wx.cloud`。
@@ -70,7 +78,7 @@ App({
 
 ### 规则
 
-- 可用时始终通过 `envQuery` 获取环境 ID。
+- 可用时始终通过 `queryEnv` 获取环境 ID。
 - 优先在应用级初始化一次，避免在页面级反复初始化。
 - 除非有明确理由，使用 `traceUser: true`，以便 CloudBase 将请求与当前微信用户关联。
 
@@ -117,7 +125,7 @@ exports.main = async () => {
 ## 4. 环境选择
 
 - 不要硬编码随意的环境 ID。
-- 优先从 `envQuery` 等工具获取环境 ID。
+- 优先从 `queryEnv` 等工具获取环境 ID。
 - 通常在 `app.js` / `app.ts` 中初始化一次 CloudBase。
 
 ## 5. 微信开发者工具与项目形态
